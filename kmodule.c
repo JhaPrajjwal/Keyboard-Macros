@@ -73,19 +73,19 @@ static void add_macro(void) {
 
 static void execute_macro(struct _full_macro tmp) {
 	int cnt = 0;
-	input_report_key(app_device, 30, 1);
-	input_report_key(app_device, 30, 0);
-	input_sync(app_device);
-
-	// for(i=0; i<tmp.size; i++) {
-	// 	printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
-	// 	//input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
-	// 	cnt += (2*tmp.status[i] - 1);
-	// 	printk(KERN_INFO "%d\n", cnt);
-	// 	if(cnt == 0)
-	// 		input_sync(app_device);
-	// }
+	// input_report_key(app_device, 30, 1);
+	// input_report_key(app_device, 30, 0);
 	// input_sync(app_device);
+
+	for(i=0; i<tmp.size; i++) {
+		printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
+		input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
+		// cnt += (2*tmp.status[i] - 1);
+		// printk(KERN_INFO "%d\n", cnt);
+		// if(cnt == 0)
+		// 	input_sync(app_device);
+	}
+	input_sync(app_device);
 }
 
 // checks if current set of keys pressed is a macro
@@ -117,12 +117,15 @@ static void check_keys_pressed(void) {
 
 			if(!pos) {
 				printk(KERN_INFO "A Macro is pressed: ");
-				for(i=0; i<tmp->len; i++)
-					printk(KERN_INFO "%d ", tmp->keycodes[i]);
+				udelay(1000);
+				for(i=0; i<tmp->len; i++){
+					printk(KERN_INFO "K: %d ", tmp->keycodes[i]);
+					input_report_key(app_device, tmp->keycodes[i], 1);
+					input_report_key(app_device, tmp->keycodes[i], 0);
+				}
+				input_sync(app_device);
 				printk(KERN_INFO "\n");
-
 				execute_macro(tmp->keys);
-				return ;
 			}
 		}
 
