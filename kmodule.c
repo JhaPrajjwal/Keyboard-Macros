@@ -7,7 +7,7 @@
 // #include <linux/delay.h>
 #include <linux/proc_fs.h>
 #include <net/inetpeer.h>
-#define DEVICE_NAME "MacroManager"
+#define DEVICE_NAME "macro_man"
 #define DEVICE_PROC_FILE_NAME "MacroManager_proc"
 #define BUFF_LEN 1000
 #define MAX_MACRO_LENGTH 5
@@ -73,19 +73,19 @@ static void add_macro(void) {
 
 static void execute_macro(struct _full_macro tmp) {
 	int cnt = 0;
-	// input_report_key(app_device, 30, 1);
-	// input_report_key(app_device, 30, 0);
-	// input_sync(app_device);
-
-	for(i=0; i<tmp.size; i++) {
-		printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
-		// input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
-		cnt += (2*tmp.status[i] - 1);
-		printk(KERN_INFO "%d\n", cnt);
-		if(cnt == 0)
-			input_sync(app_device);
-	}
+	input_report_key(app_device, 30, 1);
+	input_report_key(app_device, 30, 0);
 	input_sync(app_device);
+
+	// for(i=0; i<tmp.size; i++) {
+	// 	printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
+	// 	//input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
+	// 	cnt += (2*tmp.status[i] - 1);
+	// 	printk(KERN_INFO "%d\n", cnt);
+	// 	if(cnt == 0)
+	// 		input_sync(app_device);
+	// }
+	// input_sync(app_device);
 }
 
 // checks if current set of keys pressed is a macro
@@ -132,6 +132,7 @@ static void check_keys_pressed(void) {
 
 static int handle_key_press(int code, int pressed)
 {
+	printk(KERN_INFO "%d : %d", code, pressed);
 	if(recording) {
 		// printk(KERN_INFO "Pressed Key Scancode is %d %d\n", code, pressed);
 		if(pressed == 0) {
@@ -158,7 +159,7 @@ static int handle_key_press(int code, int pressed)
 			// check if current set of keys pressed is a macro
 			check_keys_pressed();
 		}
-		else {
+		else if(pressed == 0) {
 			// A key is released
 			for(i=0; i<MAX_MACRO_LENGTH; i++) {
 				if(keys_pressed[i] == code) {
@@ -214,7 +215,7 @@ static int app_connect(struct input_handler *handler, struct input_dev *dev, con
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "keyboard_macro_app_handle";
+	handle->name = "keyboard_handle";
 
 	err = input_register_handle(handle);
 	if(err) {
