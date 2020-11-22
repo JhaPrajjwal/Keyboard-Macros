@@ -44,6 +44,8 @@ static struct _macro {
 	struct _macro *next;
 } *macrosHead = NULL, *macrosTail = NULL, *curr_macro = NULL;
 
+static struct _macro *tbd = NULL;
+
 static struct _macro* new_macro(void) {
 	struct _macro* tmp = kzalloc(sizeof(struct _macro), GFP_KERNEL);
 
@@ -76,7 +78,7 @@ static void execute_macro(struct _full_macro tmp) {
 	// input_report_key(app_device, 30, 1);
 	// input_report_key(app_device, 30, 0);
 	// input_sync(app_device);
-
+	mdelay(100);
 	for(i=0; i<tmp.size; i++) {
 		printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
 		input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
@@ -89,7 +91,7 @@ static void execute_macro(struct _full_macro tmp) {
 }
 
 // checks if current set of keys pressed is a macro
-static void check_keys_pressed(void) {
+static void check_keys_pressed(struct input_handle *handle) {
 	int f, cnt = 0, pos;
 	struct _macro* tmp = macrosHead;
 
@@ -118,14 +120,24 @@ static void check_keys_pressed(void) {
 			if(!pos) {
 				printk(KERN_INFO "A Macro is pressed: ");
 				udelay(1000);
+				// input_close_device(handle);
+				// struct input_dev* dt = input_get_device(handle->dev);
+				tbd = tmp;
 				for(i=0; i<tmp->len; i++){
-					printk(KERN_INFO "K: %d ", tmp->keycodes[i]);
-					input_report_key(app_device, tmp->keycodes[i], 1);
-					input_report_key(app_device, tmp->keycodes[i], 0);
+					// delay(5000);
+					printk(KERN_INFO "K: %d \n", tmp->keycodes[i]);
+					// input_report_key(dt,tmp->keycodes[i],0);
+					// mdelay(5000);
+					// input_report_key(handle->dev,tmp->keycodes[i],0);
+					// if(i%2)
+					// 	input_report_key(app_device, tmp->keycodes[i], 1);
+					// input_report_key(app_device, tmp->keycodes[i], 0);
 				}
-				input_sync(app_device);
+				// input_open_device(handle);
+				// input_sync(handle->dev);
 				printk(KERN_INFO "\n");
-				execute_macro(tmp->keys);
+				return;
+				// execute_macro(tmp->keys);
 			}
 		}
 
@@ -133,8 +145,9 @@ static void check_keys_pressed(void) {
 	}
 }
 
-static int handle_key_press(int code, int pressed)
+static int handle_key_press(struct input_handle *handle, int code, int pressed)
 {
+	int cnt=0;
 	printk(KERN_INFO "%d : %d", code, pressed);
 	if(recording) {
 		// printk(KERN_INFO "Pressed Key Scancode is %d %d\n", code, pressed);
@@ -160,16 +173,25 @@ static int handle_key_press(int code, int pressed)
 				}
 			}
 			// check if current set of keys pressed is a macro
-			check_keys_pressed();
+			check_keys_pressed(handle);
 		}
 		else if(pressed == 0) {
 			// A key is released
+			cnt = 0;
 			for(i=0; i<MAX_MACRO_LENGTH; i++) {
 				if(keys_pressed[i] == code) {
 					keys_pressed[i] = -1;
-					break;
+					// break;
 				}
+				if(keys_pressed[i] != -1)
+					cnt++;
 			}
+			// if(cnt == 0 && tbd){
+			// 	printk(KERN_INFO "Executing macro!");
+			// 	struct _macro *q = tbd;
+			// 	tbd = NULL;
+			// 	execute_macro(q->keys);
+			// }
 		}
 	}
 
@@ -203,7 +225,23 @@ static void act_accordingly(void) {
 static bool app_filter(struct input_handle *handle, unsigned int type, unsigned int code, int value)
 {
 	if(type == EV_KEY && code != 272) // 272 is mouse button scancode
-		handle_key_press(code, value);
+	{
+		handle_key_press(handle, code, value);
+		printk(KERN_INFO "What am i doing? %d %d %d\n",type,code,value);
+		int cnt = 0;
+		for(i=0; i<MAX_MACRO_LENGTH; i++) {
+			if(keys_pressed[i] != -1)
+				cnt++;
+		}
+		if(cnt == 0 && tbd){
+			printk(KERN_INFO "Executing macro!\n");
+			struct _macro *q = tbd;
+			tbd = NULL;
+			// input_sync(handle->dev);
+			input_sync(app_device);
+			execute_macro(q->keys);
+		}
+	}
 	return 0;
 }
 
