@@ -78,7 +78,6 @@ static void execute_macro(struct _full_macro tmp) {
 	// input_report_key(app_device, 30, 1);
 	// input_report_key(app_device, 30, 0);
 	// input_sync(app_device);
-	mdelay(100);
 	for(i=0; i<tmp.size; i++) {
 		printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
 		input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
@@ -224,10 +223,9 @@ static void act_accordingly(void) {
 */
 static bool app_filter(struct input_handle *handle, unsigned int type, unsigned int code, int value)
 {
-	if(type == EV_KEY && code != 272) // 272 is mouse button scancode
-	{
-		handle_key_press(handle, code, value);
-		printk(KERN_INFO "What am i doing? %d %d %d\n",type,code,value);
+	printk(KERN_INFO "What am i doing? %d %d %d\n",type,code,value);
+	if(type != EV_SYN && handle->dev != app_device) {
+		// input_sync(app_device);
 		int cnt = 0;
 		for(i=0; i<MAX_MACRO_LENGTH; i++) {
 			if(keys_pressed[i] != -1)
@@ -238,9 +236,12 @@ static bool app_filter(struct input_handle *handle, unsigned int type, unsigned 
 			struct _macro *q = tbd;
 			tbd = NULL;
 			// input_sync(handle->dev);
-			input_sync(app_device);
 			execute_macro(q->keys);
 		}
+	}
+	if(type == EV_KEY && code != 272) // 272 is mouse button scancode
+	{
+		handle_key_press(handle, code, value);
 	}
 	return 0;
 }
