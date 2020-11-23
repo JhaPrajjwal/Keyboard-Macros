@@ -7,8 +7,14 @@
 // #include <linux/delay.h>
 #include <linux/proc_fs.h>
 #include <net/inetpeer.h>
+#include <linux/fs.h>
+#include <asm/segment.h>
+#include <asm/uaccess.h>
+#include <linux/buffer_head.h>
+
 #define DEVICE_NAME "macro_man"
 #define DEVICE_PROC_FILE_NAME "MacroManager_proc"
+#define MACRO_FILE "/home/dj/test.txt"
 #define BUFF_LEN 1000
 #define MAX_MACRO_LENGTH 5
 
@@ -24,8 +30,56 @@ static int recording = 0;
 static int recording_full_macro = 0;
 static int num_macros = 0;
 static int i, j;
+static long long int roffset = 0, woffset = 0;
 char proc_buff[BUFF_LEN];
 //--------------------------------------
+
+// File operations
+
+struct file *file_open(const char *path, int flags,int rights) {
+	struct file *filp = NULL;
+	mm_segment_t oldfs;
+	int err = 0;
+
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
+	filp = filp_open(path, flags, rights);
+	set_fs(oldfs);
+	if (IS_ERR(filp)) {
+		err = PTR_ERR(filp);
+		return NULL;
+	}
+	return filp;
+}
+
+void file_close(struct file *file)
+{
+	filp_close(file,NULL);
+}
+
+int file_read(struct file *file, unsigned long long *offset, unsigned char *data, unsigned int size)
+{
+	mm_segment_t oldfs;
+	int ret;
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
+	ret = vfs_read(file, data, size, offset);
+	set_fs(oldfs);
+	return ret;
+}
+
+int file_write (struct file *file, unsigned long long *offset, unsigned char *data, unsigned int size)
+{
+	mm_segment_t oldfs;
+	int ret;
+
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
+	ret = vfs_write(file, data, size, offset);
+
+	set_fs(oldfs);
+	return ret;
+}
 
 /**
 * Macro related definitions
@@ -45,6 +99,30 @@ static struct _macro {
 } *macrosHead = NULL, *macrosTail = NULL, *curr_macro = NULL;
 
 static struct _macro *tbd = NULL;
+
+static int write_macro(struct file* mac_file, struct _macro* macro) {
+	int ret = file_write(mac_file, &woffset, (char*)macro, sizeof(struct _macro));
+	return ret;
+}
+
+static int write_macros(void) 
+{
+	struct file* mac_file = file_open(MACRO_FILE,O_CREAT | O_WRONLY | O_TRUNC, 
+    						S_IWUSR | S_IRUSR);
+	if(mac_file == NULL) {
+		printk(KERN_ERR "Unable to open file!\n");
+		return -1;
+	}
+	woffset = 0;
+	curr_macro = macrosHead;
+	while(curr_macro) {
+		printk(KERN_INFO "Writing macro: %x\n",curr_macro);
+		write_macro(mac_file,curr_macro);
+		curr_macro = curr_macro->next;
+	}
+	file_close(mac_file);
+	return 0;
+}
 
 static struct _macro* new_macro(void) {
 	struct _macro* tmp = kzalloc(sizeof(struct _macro), GFP_KERNEL);
@@ -69,6 +147,28 @@ static void add_macro(void) {
 	}
 		
 	curr_macro = NULL;
+}
+
+static int read_macros(void)
+{
+	int cnt = 0;
+	struct file* mac_file;
+	// struct _macro* tmp_macro;
+	if(macrosHead != NULL) {
+		return -1;
+	}
+	mac_file = file_open(MACRO_FILE,O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR);
+	curr_macro = new_macro();
+	roffset = 0;
+	while(file_read(mac_file,&roffset, (char*) curr_macro, sizeof(struct _macro)))
+	{
+		cnt++;
+		curr_macro->next = NULL;
+		add_macro();
+		curr_macro = new_macro();
+	}
+	kfree(curr_macro);
+	return cnt;
 }
 
 //-----------------------------------------
@@ -214,6 +314,7 @@ static void act_accordingly(void) {
 	}
 	else if(strcmp(proc_buff, "endFullMacro") == 0) {
 		recording_full_macro = 0;
+		write_macros();
 	}
 }
 
@@ -223,7 +324,7 @@ static void act_accordingly(void) {
 */
 static bool app_filter(struct input_handle *handle, unsigned int type, unsigned int code, int value)
 {
-	printk(KERN_INFO "What am i doing? %d %d %d\n",type,code,value);
+	// printk(KERN_INFO "What am i doing? %d %d %d\n",type,code,value);
 	if(type != EV_SYN && handle->dev != app_device) {
 		// input_sync(app_device);
 		int cnt = 0;
@@ -328,10 +429,21 @@ static struct file_operations app_proc_fops = {
 	.write = app_proc_write,
 };
 
+
 static int __init my_init(void) {
     int err, i, num_keys;
+    char file_buffer[2048];
     printk(KERN_INFO "HELLO\n");
+    read_macros();
+    // struct file* mac_file = file_open("/home/dj/test.txt",O_CREAT | O_RDWR, 
+    // 						S_IWUSR | S_IRUSR);
 
+    // file_read(mac_file,&roffset,file_buffer,1);
+    // file_read(mac_file,&roffset,file_buffer+1,1);
+    // printk(KERN_INFO "Found Line: %s\n",file_buffer);
+    // file_close(mac_file);
+    printk(KERN_INFO "Size: %d %d\n", sizeof(struct _macro),
+    						sizeof(struct _full_macro));
     app_device = input_allocate_device();
     if(!app_device) {
         printk(KERN_INFO "Error in allocating device %s, Memory Full", DEVICE_NAME);
