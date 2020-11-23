@@ -47,6 +47,7 @@ struct file *file_open(const char *path, int flags,int rights) {
 	set_fs(oldfs);
 	if (IS_ERR(filp)) {
 		err = PTR_ERR(filp);
+		printk(KERN_ERR "File open error: %d\n", err);
 		return NULL;
 	}
 	return filp;
@@ -108,7 +109,7 @@ static int write_macro(struct file* mac_file, struct _macro* macro) {
 static int write_macros(void) 
 {
 	struct file* mac_file = file_open(MACRO_FILE,O_CREAT | O_WRONLY | O_TRUNC, 
-    						S_IWUSR | S_IRUSR);
+    						S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP);
 	if(mac_file == NULL) {
 		printk(KERN_ERR "Unable to open file!\n");
 		return -1;
@@ -157,7 +158,10 @@ static int read_macros(void)
 	if(macrosHead != NULL) {
 		return -1;
 	}
-	mac_file = file_open(MACRO_FILE,O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR);
+	mac_file = file_open(MACRO_FILE,O_RDONLY ,0);
+	if(mac_file == NULL) {
+		return 0;
+	}
 	curr_macro = new_macro();
 	roffset = 0;
 	while(file_read(mac_file,&roffset, (char*) curr_macro, sizeof(struct _macro)))
