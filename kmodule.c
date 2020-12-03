@@ -88,8 +88,8 @@ int file_write (struct file *file, unsigned long long *offset, unsigned char *da
 
 static struct _full_macro {
 	int size;
-	int keycodes[20];
-	int status[20];
+	int keycodes[40];
+	int status[40];
 };
 
 static struct _macro {
@@ -179,14 +179,11 @@ static int read_macros(void)
 
 static void execute_macro(struct _full_macro tmp) {
 	int cnt = 0;
-	// input_report_key(app_device, 30, 1);
-	// input_report_key(app_device, 30, 0);
-	// input_sync(app_device);
 	for(i=0; i<tmp.size; i++) {
 		printk(KERN_INFO "%d : %d \n", tmp.keycodes[i], tmp.status[i]);
 		input_report_key(app_device, tmp.keycodes[i], tmp.status[i]);
 		// cnt += (2*tmp.status[i] - 1);
-		// printk(KERN_INFO "%d\n", cnt);
+		// // printk(KERN_INFO "%d\n", cnt);
 		// if(cnt == 0)
 		// 	input_sync(app_device);
 	}
@@ -344,7 +341,7 @@ static bool app_filter(struct input_handle *handle, unsigned int type, unsigned 
 			execute_macro(q->keys);
 		}
 	}
-	if(type == EV_KEY && code != 272) // 272 is mouse button scancode
+	if(type == EV_KEY && code != 272 && handle->dev != app_device) // 272 is mouse button scancode
 	{
 		handle_key_press(handle, code, value);
 	}

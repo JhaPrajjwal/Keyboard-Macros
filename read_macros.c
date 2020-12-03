@@ -2,12 +2,13 @@
 #include <stdio.h>
 
 #define MACRO_FILE "/home/pj/test.txt"
-#define OUT_TMP_FILE "/home/pj/tmp.txt"
+#define OUT_TMP_FILE "tmp.txt"
 #define MAX_MACRO_LENGTH 5
+
 struct _full_macro {
 	int size;
-	int keycodes[20];
-	int status[20];
+	int keycodes[40];
+	int status[40];
 };
 
 struct _macro {

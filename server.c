@@ -12,9 +12,9 @@
 #include<pthread.h>
 
 #define PORT 4444
-#define BUF_SIZE 2000
+#define BUF_SIZE 360
 #define CLADDR_LEN 100
-#define MACROS_FILE_NAME "home/pj/test.txt"
+#define MACROS_FILE_NAME "/home/pj/test.txt"
 
 int sockfd;
 struct sockaddr_in addr;

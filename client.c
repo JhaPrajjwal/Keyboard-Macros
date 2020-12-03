@@ -9,14 +9,15 @@
 #include<arpa/inet.h>
   
 #define PORT 4444 
-#define BUF_SIZE 200
+#define BUF_SIZE 360
 #define MACROS_FILE_NAME "/home/pj/test.txt"
 
 int sockfd;
 struct sockaddr_in addr;
-const char cmds[2][20] = {"PUSH", "PULL"};
+const char cmds[2][BUF_SIZE] = {"PUSH", "PULL"};
 
 int send_message(char msg[], int dest_sockfd) {
+    printf("Send: %s\n", msg);
     return sendto(dest_sockfd, msg, BUF_SIZE, 0, (struct sockaddr *) &addr, sizeof(addr));
 }
 
