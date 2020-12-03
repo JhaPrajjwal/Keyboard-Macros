@@ -14,7 +14,7 @@
 
 #define DEVICE_NAME "macro_man"
 #define DEVICE_PROC_FILE_NAME "MacroManager_proc"
-#define MACRO_FILE "/home/dj/test.txt"
+#define MACRO_FILE "/home/pj/test.txt"
 #define BUFF_LEN 1000
 #define MAX_MACRO_LENGTH 5
 
